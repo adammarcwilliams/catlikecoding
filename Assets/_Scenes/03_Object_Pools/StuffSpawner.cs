@@ -4,25 +4,32 @@ using UnityEngine;
 
 public class StuffSpawner : MonoBehaviour {
 
-    public float timeBetweenSpawns;
-    public Stuff[] stuffPrefabs;
+    public FloatRange timeBetweenSpawns, scale, randomVelocity, angularVelocity;
     public float velocityScaler;
+    public Stuff[] stuffPrefabs;
+    public Material stuffMaterial;
 
     float timeSinceLastSpawn;
+    float currentSpawnDelay;
 
     private void FixedUpdate() {
         timeSinceLastSpawn += Time.deltaTime;
-        if (timeSinceLastSpawn >= timeBetweenSpawns)
+        if (timeSinceLastSpawn >= currentSpawnDelay)
         {
-            timeSinceLastSpawn -= timeBetweenSpawns;
+            timeSinceLastSpawn -= currentSpawnDelay;
+            currentSpawnDelay = timeBetweenSpawns.RandomInRange;
             SpawnStuff();
         }
     }
 
     void SpawnStuff () {
         Stuff prefab = stuffPrefabs[Random.Range(0, stuffPrefabs.Length)];
-        Stuff spawn = Instantiate<Stuff>(prefab);
+        Stuff spawn = prefab.GetPooledInstance<Stuff>();
         spawn.transform.localPosition = transform.position;
-        spawn.Body.velocity = transform.up * velocityScaler;
+        spawn.transform.localScale = Vector3.one * scale.RandomInRange;
+        spawn.transform.localRotation = Random.rotation;
+        spawn.Body.velocity = transform.up * velocityScaler + Random.onUnitSphere * randomVelocity.RandomInRange;
+        spawn.Body.angularVelocity = Random.onUnitSphere * angularVelocity.RandomInRange;
+        spawn.SetMaterial(stuffMaterial);
     }
 }
