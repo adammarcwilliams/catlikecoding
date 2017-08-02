@@ -39,7 +39,7 @@ public class MeshDeformer : MonoBehaviour {
     IEnumerator RandomForce () {
         while(true)
         {
-            AddDeformingForce(originalVertices[Random.Range(0, originalVertices.Length - 1)], 20f);
+            AddDeformingForce(originalVertices[Random.Range(0, originalVertices.Length - 1)], 40f);
             yield return new WaitForSeconds(0.1f);
         }
     }
