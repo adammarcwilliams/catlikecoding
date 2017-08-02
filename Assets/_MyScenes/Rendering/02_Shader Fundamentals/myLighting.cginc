@@ -101,7 +101,21 @@ UnityLight CreateLight(Interpolators i)
 	return light;
 }
 
-UnityIndirect CreateIndirectLight(Interpolators i)
+float3 BoxProjection (
+	float3 direction, float3 position,
+	float4 cubemapPosition, float3 boxMin, float3 boxMax
+) {
+	UNITY_BRANCH
+	if (cubemapPosition.w > 0) {
+		float3 factors =
+			((direction > 0 ? boxMax : boxMin) - position) / direction;
+		float scalar = min(min(factors.x, factors.y), factors.z);
+		direction = direction * scalar + (position - cubemapPosition);
+	}
+	return direction;
+}
+
+UnityIndirect CreateIndirectLight(Interpolators i, float3 viewDir)
 {
 	UnityIndirect indirectLight;
 	indirectLight.diffuse = 0;
@@ -113,6 +127,18 @@ UnityIndirect CreateIndirectLight(Interpolators i)
 
 	#if defined(FORWARD_BASE_PASS)
 		indirectLight.diffuse += max(0, ShadeSH9(float4(i.normal, 1)));
+		float3 reflectionDir = reflect(-viewDir, i.normal);
+		float roughness = 1 - _Smoothness;
+		Unity_GlossyEnvironmentData envData;
+		envData.roughness = 1 - _Smoothness;
+		envData.reflUVW = BoxProjection(
+			reflectionDir, i.worldPos,
+			unity_SpecCube0_ProbePosition,
+			unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax
+		);
+		indirectLight.specular = Unity_GlossyEnvironment(
+			UNITY_PASS_TEXCUBE(unity_SpecCube0), unity_SpecCube0_HDR, envData
+		);
 	#endif
 
 	return indirectLight;
@@ -155,7 +181,7 @@ float4 MyFragmentProgram(Interpolators i) : SV_TARGET{
 		albedo, specularTint,
 		oneMinusReflectivity, _Smoothness,
 		i.normal, viewDir,
-		CreateLight(i), CreateIndirectLight(i)
+		CreateLight(i), CreateIndirectLight(i, viewDir)
 	);
 }
 
